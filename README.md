@@ -1,8 +1,10 @@
-## Overview
+### Overview
 
 This repository contains a sample mobile app built with React, utilizing a Node.js backend. The app includes a login screen and a home screen that displays geolocation information based on the user's IP address.
 
 ![App Screenshot](./screenshot.png)
+
+## Node Version:  20.11.0
 
 ## Project Structure
 
