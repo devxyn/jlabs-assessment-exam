@@ -16,7 +16,7 @@ const Home = () => {
   useEffect(() => {
     fetchGeoData();
 
-    const savedItem = localStorage.getItem('history');
+    const savedItem = window.localStorage.getItem('history');
     const savedHistory = JSON.parse(savedItem);
     setHistory(savedHistory);
   }, []);
