@@ -49,7 +49,7 @@ const Home = () => {
       }
     } catch (error) {
       console.error(error);
-      geoDispatch({ type: 'FETCH_GEO_FAILURE', payload: 'Invalid IP address' });
+      geoDispatch({ type: 'FETCH_GEO_FAILED', payload: 'Invalid IP address' });
     }
   };
 
@@ -103,6 +103,8 @@ const Home = () => {
               Enter IP address:
             </label>
           </div>
+
+          {geoState.error && <p className='w-full px-3 py-2 bg-red-400 text-xs rounded-lg'>{geoState.error}</p>}
 
           <div className='flex justify-center gap-4'>
             <button className='bg-secondary px-4 py-2 rounded-lg' onClick={() => handleSearch(ip)}>
