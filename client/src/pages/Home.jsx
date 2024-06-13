@@ -1,55 +1,79 @@
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable react-hooks/exhaustive-deps */
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { useCookies } from 'react-cookie';
-import { useLoaderData, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { initialState, geoReducer } from '../reducers/geoDataReducer';
 import Map from '../component/Map';
 import GeoData from '../component/GeoData';
 
 const Home = () => {
-  const loaderData = useLoaderData();
-  const [geoData, setGeoData] = useState(loaderData);
-  const [inputData, setInputData] = useState('');
-  const [history, setHistory] = useState([]);
+  const [ip, setIp] = useState('');
   const [location, setLocation] = useState({ lat: 0, lng: 0 });
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [geoState, geoDispatch] = useReducer(geoReducer, initialState);
   const [cookies, setCookies] = useCookies(['access_token']);
   const navigate = useNavigate();
+
+  const fetchGeoData = async () => {
+    try {
+      const response = await axios.get('https://ipinfo.io/geo');
+      const loc = response.data.loc.split(',');
+      setLocation({ lat: parseFloat(loc[0]), lng: parseFloat(loc[1]) });
+      geoDispatch({ type: 'FETCH_GEO_SUCCESS', payload: response.data });
+    } catch (error) {
+      console.error(error);
+      geoDispatch({ type: 'FETCH_GEO_FAILURE', payload: error.response.data });
+    }
+  };
 
   useEffect(() => {
     if (!cookies.access_token) {
       navigate('/login');
     }
 
-    const loc = loaderData.loc.split(',');
-    setLocation({ lat: parseFloat(loc[0]), lng: parseFloat(loc[1]) });
+    fetchGeoData();
   }, []);
-
-  const handleLogOut = () => {
-    setCookies('access_token', '');
-    navigate('/login');
-  };
-
-  const handleInputChange = (e) => {
-    setInputData(e.target.value);
-  };
 
   const handleSearch = async (input) => {
     try {
       const response = await axios.get(`https://ipinfo.io/${input}/geo`);
-      setGeoData(response.data);
       const loc = response.data.loc.split(',');
+      geoDispatch({ type: 'FETCH_GEO_SUCCESS', payload: response.data });
       setLocation({ lat: parseFloat(loc[0]), lng: parseFloat(loc[1]) });
-      setHistory((prev) => [...prev, response.data.ip]);
-      setInputData(input);
+      setIp(input);
+
+      if (!geoState.history.includes(response.data.ip)) {
+        geoDispatch({ type: 'ADD_HISTORY', payload: response.data.ip });
+      }
     } catch (error) {
       console.error(error);
+      geoDispatch({ type: 'FETCH_GEO_FAILURE', payload: 'Invalid IP address' });
     }
   };
 
-  const handleResetSearch = () => {
-    setInputData('');
-    setGeoData(loaderData);
+  const handleClearSearch = () => {
+    setIp('');
+    fetchGeoData();
+  };
+
+  const handleSelectedCheckbox = (e, item) => {
+    if (e.target.checked) {
+      setSelectedItems((prev) => [...prev, item]);
+    } else {
+      setSelectedItems((prev) => prev.filter((i) => i !== item));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    geoDispatch({ type: 'DELETE_HISTORY', payload: selectedItems });
+    setSelectedItems([]);
+  };
+
+  const handleLogOut = () => {
+    setCookies('access_token', '');
+    navigate('/login');
   };
 
   return (
@@ -68,8 +92,8 @@ const Home = () => {
               type='text'
               name='ip-address'
               id='ip-address'
-              value={inputData}
-              onChange={handleInputChange}
+              value={ip}
+              onChange={(e) => setIp(e.target.value)}
               className='block px-2.5 pb-2.5 pt-5 w-full text-sm text-white bg-secondary rounded-lg border border-white appearance-none focus:outline-none focus:ring-0 focus:border-white peer'
               placeholder=' '
             />
@@ -81,25 +105,37 @@ const Home = () => {
           </div>
 
           <div className='flex justify-center gap-4'>
-            <button className='bg-secondary px-4 py-2 rounded-lg' onClick={() => handleSearch(inputData)}>
+            <button className='bg-secondary px-4 py-2 rounded-lg' onClick={() => handleSearch(ip)}>
               Search
             </button>
-            <button className='bg-secondary px-4 py-2 rounded-lg' onClick={handleResetSearch}>
+            <button className='bg-secondary px-4 py-2 rounded-lg' onClick={handleClearSearch}>
               Reset
             </button>
           </div>
         </div>
 
-        {!!history.length && (
+        {!!geoState.history.length && (
           <div className='mb-5'>
-            <h4 className='text-xl'>Search History</h4>
+            <div className='flex flexrow justify-between items-center'>
+              <h4 className='text-xl'>Search History</h4>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={selectedItems.length === 0}
+                className='px-4 py-2 text-xl bg-secondary rounded-lg text-red-400 font-semibold hover:text-red-600 hover:underline'>
+                Delete
+              </button>
+            </div>
             <ul className='pl-5'>
-              {history.map((item, index) => (
-                <li
-                  className='list-disc text-lg cursor-pointer hover:underline'
-                  key={index}
-                  onClick={() => handleSearch(item)}>
-                  {item}
+              {geoState.history.map((item, index) => (
+                <li className=' list-disc text-lg flex flex-row items-center gap-2' key={index}>
+                  <input
+                    type='checkbox'
+                    checked={selectedItems.includes(item)}
+                    onChange={(e) => handleSelectedCheckbox(e, item)}
+                  />
+                  <p className='cursor-pointer hover:underline' onClick={() => handleSearch(item)}>
+                    {item}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -108,9 +144,8 @@ const Home = () => {
       </div>
 
       <div className='w-full lg:w-[75%] flex flex-col items-center justify-center lg:px-10 lg:flex lg:flex-row lg:justify-center lg:items-center'>
-        <GeoData geoData={geoData} />
+        <GeoData data={geoState.geoData} />
         <Map lat={location.lat} lng={location.lng} />
-        <div></div>
       </div>
     </div>
   );
