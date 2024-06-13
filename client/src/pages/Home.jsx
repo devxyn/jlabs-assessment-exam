@@ -117,8 +117,8 @@ const Home = () => {
               <h4 className='text-xl'>Search History</h4>
               <button
                 onClick={handleDeleteSelected}
-                disabled={selectedItems.length === 0}
-                className='px-4 py-2 text-xl bg-secondary rounded-lg text-red-400 font-semibold hover:text-red-600 hover:underline'>
+                disabled={!history || history.length === 0}
+                className='px-4 py-2 text-xl bg-secondary rounded-lg text-red-600  font-semibold '>
                 Delete
               </button>
             </div>
