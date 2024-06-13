@@ -4,7 +4,7 @@ This repository contains a sample mobile app built with React, utilizing a Node.
 
 ![App Screenshot](./screenshot.png)
 
-## Node Version:  20.11.0
+### Node Version:  20.11.0
 
 ## Project Structure
 
